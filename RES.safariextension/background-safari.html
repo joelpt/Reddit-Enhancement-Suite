@@ -34,7 +34,9 @@
 <html>
 <head>
 	<script>
-	XHRCache = {
+	/* global safari: false */
+
+	var XHRCache = {
 		forceCache: false,
 		capacity: 250,
 		entries: {},
@@ -54,7 +56,7 @@
 				return;
 			} else {
 //				console.count("add");
-				this.entries[key] = {data: value, timestamp: new Date(), hits: 1};
+				this.entries[key] = {data: value, timestamp: Date.now(), hits: 1};
 				this.count++;
 			}
 			if (this.count > this.capacity) {
@@ -62,10 +64,10 @@
 			}
 		},
 		prune: function() {
-			var now = new Date();
+			var now = Date.now();
 			var bottom = [];
 			for (var key in this.entries) {
-//				if (this.entries[key].hits == 1) {
+//				if (this.entries[key].hits === 1) {
 //					delete this.entries[key];
 //					this.count--;
 //					continue;
@@ -92,120 +94,131 @@
 	};
 	
 	function respondToMessage (msgEvent) {
-		var request = msgEvent.message;
+		var request = msgEvent.message,
+			xhr, button, linkTab;
 		request.requestType = msgEvent.name;
-		switch(request.requestType) {
+		switch (request.requestType) {
 			case 'GM_xmlhttpRequest':
 				if (request.aggressiveCache || XHRCache.forceCache) {
 					var cachedResult = XHRCache.check(request.url);
 					if (cachedResult) {
+						cachedResult.XHRID = msgEvent.message.XHRID;
 						sendResponse(cachedResult, msgEvent);
 						return;
 					}
 				}
-				var xhr = new XMLHttpRequest();
+				xhr = new XMLHttpRequest();
 				xhr.XHRID = msgEvent.message.XHRID;
 				xhr.open(request.method, request.url, true);
-				if (request.method == "POST") {
+				if (request.method === "POST") {
 					xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
 				}
 				xhr.onreadystatechange = function() {
-				  if (xhr.readyState == 4) {
-					  sendResponse(xhr, msgEvent);
-					  //Only cache on HTTP OK and non empty body
-					  if ((request.aggressiveCache || XHRCache.forceCache) && (xhr.status == 200 && xhr.responseText)) {
-						  XHRCache.add(request.url, xhr);
-					  }
-				  }
+					if (xhr.readyState === 4) {
+						var response = {status: xhr.status, responseText: xhr.responseText, XHRID: xhr.XHRID};
+						sendResponse(response, msgEvent);
+						// Only cache on HTTP OK and non empty body
+						if ((request.aggressiveCache || XHRCache.forceCache) && (xhr.status === 200 && xhr.responseText)) {
+							XHRCache.add(request.url, response);
+						}
+					}
 				}
 				xhr.send(request.data);
 				break;
 			case 'singleClick':
-				((request.button == 1) || (request.ctrl == 1)) ? button = 'background' : button = 'foreground';
+				button = ((request.button === 1) || (request.ctrl === 1)) ? 'background' : 'foreground';
 				// handle requests from singleClick module
-				if (request.openOrder == 'commentsfirst') {
+				var commentsTab;
+				if (request.openOrder === 'commentsfirst') {
 					// only open a second tab if the link is different...
-					if (request.linkURL != request.commentsURL) {
+					if (request.linkURL !== request.commentsURL) {
 						// chrome.tabs.create({url: request.commentsURL});
-						var commentsTab = safari.application.activeBrowserWindow.openTab(button);
+						commentsTab = safari.application.activeBrowserWindow.openTab(button);
 						commentsTab.url = request.commentsURL;
 					}
 					// chrome.tabs.create({url: request.linkURL});
-					var linkTab = safari.application.activeBrowserWindow.openTab(button);
+					linkTab = safari.application.activeBrowserWindow.openTab(button);
 					linkTab.url = request.linkURL;
 				} else {
 					// chrome.tabs.create({url: request.linkURL});
-					var linkTab = safari.application.activeBrowserWindow.openTab(button);
+					linkTab = safari.application.activeBrowserWindow.openTab(button);
 					linkTab.url = request.linkURL;
 					// only open a second tab if the link is different...
-					if (request.linkURL != request.commentsURL) {
+					if (request.linkURL !== request.commentsURL) {
 						// chrome.tabs.create({url: request.commentsURL});
-						var commentsTab = safari.application.activeBrowserWindow.openTab(button);
+						commentsTab = safari.application.activeBrowserWindow.openTab(button);
 						commentsTab.url = request.commentsURL;
 					}
 				}
 				sendResponse({status: "success"}, msgEvent);
 				break;
 			case 'keyboardNav':
-				(request.button == 1) ? button = 'background' : button = 'foreground';
+				button = (request.button === 1) ? 'background' : 'foreground';
 				// handle requests from keyboardNav module
 				thisLinkURL = request.linkURL;
-				if (thisLinkURL.toLowerCase().substring(0,4) != 'http') {
-					(thisLinkURL.substring(0,1) == '/') ? thisLinkURL = 'http://www.reddit.com' + thisLinkURL : thisLinkURL = location.href + thisLinkURL;
+				if (thisLinkURL.toLowerCase().substring(0, 4) !== 'http') {
+					thisLinkURL = (thisLinkURL.substring(0, 1) === '/') ? 'http://www.reddit.com' + thisLinkURL : location.href + thisLinkURL;
 				}
 				// chrome.tabs.create({url: thisLinkURL});
-				var linkTab = safari.application.activeBrowserWindow.openTab(button);
+				// opens tab next to current, instead of at end of tab bar
+				linkTab = safari.application.activeBrowserWindow.openTab(button, safari.application.activeBrowserWindow.tabs.indexOf(safari.application.activeBrowserWindow.activeTab) + 1);
 				linkTab.url = thisLinkURL;
 				sendResponse({status: "success"}, msgEvent);
 				break;
 			case 'openLinkInNewTab':
-				var focus = (request.button == true) ? 'foreground' : 'background';
+				var focus = (request.button === true) ? 'foreground' : 'background';
 				thisLinkURL = request.linkURL;
-				if (thisLinkURL.toLowerCase().substring(0,4) != 'http') {
-					(thisLinkURL.substring(0,1) == '/') ? thisLinkURL = 'http://www.reddit.com' + thisLinkURL : thisLinkURL = location.href + thisLinkURL;
+				if (thisLinkURL.toLowerCase().substring(0, 4) !== 'http') {
+					thisLinkURL = (thisLinkURL.substring(0, 1) === '/') ? 'http://www.reddit.com' + thisLinkURL : location.href + thisLinkURL;
 				}
-				var linkTab = safari.application.activeBrowserWindow.openTab(focus);
+				linkTab = safari.application.activeBrowserWindow.openTab(focus);
 				linkTab.url = thisLinkURL;
 				sendResponse({status: "success"}, msgEvent);
 				break;
 			case 'compareVersion':
-				var xhr = new XMLHttpRequest();
+				xhr = new XMLHttpRequest();
 				xhr.open("GET", request.url, true);
 				xhr.onreadystatechange = function() {
-				  if (xhr.readyState == 4) {
-					// JSON.parse does not evaluate the attacker's scripts.
-					var resp = JSON.parse(xhr.responseText);
-					if (typeof(msgEvent.message.forceUpdate) != 'undefined') {
-						resp.forceUpdate = msgEvent.message.forceUpdate;
+					if (xhr.readyState === 4) {
+						// JSON.parse does not evaluate the attacker's scripts.
+						var resp = JSON.parse(xhr.responseText);
+						if (typeof msgEvent.message.forceUpdate !== 'undefined') {
+							resp.forceUpdate = msgEvent.message.forceUpdate;
+						}
+						sendResponse(resp, msgEvent);
 					}
-					sendResponse(resp, msgEvent);
-				  }
 				}
 				xhr.send();
 				break;
 			case 'loadTweet':
-				var xhr = new XMLHttpRequest();
+				xhr = new XMLHttpRequest();
 				xhr.open("GET", request.url, true);
 				xhr.onreadystatechange = function() {
-				  if (xhr.readyState == 4) {
-					// JSON.parse does not evaluate the attacker's scripts.
-					var resp = JSON.parse(xhr.responseText);
-					if (typeof(msgEvent.message.target) != 'undefined') {
-						resp.target = msgEvent.message.target;
+					if (xhr.readyState === 4) {
+						// JSON.parse does not evaluate the attacker's scripts.
+						var resp = JSON.parse(xhr.responseText);
+						if (typeof msgEvent.message.target !== 'undefined') {
+							resp.target = msgEvent.message.target;
+						}
+						sendResponse(resp, msgEvent);
 					}
-					sendResponse(resp, msgEvent);
-				  }
 				}
 				xhr.send();
 				break;
 			case 'getLocalStorage':
-				sendResponse(localStorage, msgEvent);
+				var ls = {};
+				for (var i = 0, len=localStorage.length; i < len; i++){
+					if (localStorage.key(i)) {
+						ls[localStorage.key(i)] = localStorage.getItem(localStorage.key(i));
+					}
+				}
+				sendResponse(ls, msgEvent);
 				break;
 			case 'saveLocalStorage':
 				for (var key in request.data) {
-					localStorage.setItem(key,request.data[key]);
+					localStorage.setItem(key, request.data[key]);
 				}
-				localStorage.setItem('importedFromForeground',true);
+				localStorage.setItem('importedFromForeground', true);
 				sendResponse(localStorage, msgEvent);
 				break;
 			case 'localStorage':
@@ -226,7 +239,7 @@
 						for (var i = 0; i < windows.length; i++) {
 							var tabs = windows[i].tabs;
 							for (var j = 0; j < tabs.length; j++) {
-								if (thisTabID != tabs[j]) {
+								if (thisTabID !== tabs[j]) {
 									//Should we also filter tabs that RES won't run on?
 									if ((tabs[j]) && (tabs[j].page)) {
 										tabs[j].page.dispatchMessage("localStorage", { requestType: "localStorage", itemName: request.itemName, itemValue: request.itemValue });
@@ -244,14 +257,29 @@
 						break;
 				}
 				break;
+			case 'addURLToHistory':
+				var passBack = {
+					url: request.url
+				};
+				if (!safari.application.privateBrowsing.enabled) {
+					console.log('not private');
+					sendResponse(passBack, msgEvent);
+				}
+				break;
 			default:
 				sendResponse({status: "unrecognized request type"}, msgEvent);
 		}
 	};
 	function sendResponse(data, event) {
-		event.target.page.dispatchMessage(event.name, data);
+		if (!event.target.page) {
+			setTimeout(function() {
+				sendResponse(data, event);
+			}, 20);
+		} else {
+			event.target.page.dispatchMessage(event.name, data);
+		}
 	}
-	safari.application.addEventListener("message",respondToMessage,false);
+	safari.application.addEventListener("message", respondToMessage, false);
 
 	</script>
 </head>

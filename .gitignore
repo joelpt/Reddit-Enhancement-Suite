@@ -1,5 +1,106 @@
+## Visual Studio
+*_i.c
+*_p.c
+*.ilk
+*.meta
+*.obj
+*.pch
+*.pdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*.log
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.log
+*.scc
+
+/IE/[Dd]ebug/
+/IE/[Rr]elease/
+/IE/[Bb]in/
+/IE/[Oo]bj/
+
+# User-specific files
+*.suo
+*.user
+*.sln.docstates
+
+# Visual C++ cache files
+/IE/ipch/
+*.aps
+*.ncb
+*.opensdf
+*.sdf
+*.cachefile
+
+## General
+/node_modules
+Chrome.pem
+/XPI/reddit_res.xpi
+/deprecated
+
+/Chrome/*.js
+/Chrome/modules/*.js
+/Chrome/*.css
+/Chrome/*.html
+!/Chrome/background.js
+/OperaBlink/*.js
+/OperaBlink/*.html
+/OperaBlink/modules/*.js
+/OperaBlink/*.css
+!/OperaBlink/background.js
+/RES.safariextension/*.js
+/RES.safariextension/modules/*.js
+/RES.safariextension/*.css
+/RES.safariextension/*.html
+/Opera/*.js
+!/Opera/opera-*.js
+/Opera/*.css
+!Opera/includes/*
+/Opera/templates.html
+/Opera/modules/*
+/XPI/data/*
+!/XPI/lib/main.js
+!/lib/*
+/commentBoxes.css
+/nightmode.css
+/res.css
+/guiders.css
+/tokenize.css
+!**/browsersupport-*.js
+!browsersupport-*.js
+
+/tests/selenium/opera-profile/
+/tests/selenium/opera-profile-clean/
+
+## OS X
 .DS_Store
-XPI/data/reddit_enhancement_suite.user.js
-RES.safariextension/reddit_enhancement_suite.user.js
-Chrome/reddit_enhancement_suite.user.js
-Opera/includes/reddit_enhancement_suite.user.js
+.AppleDouble
+.LSOverride
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear on external disk
+.Spotlight-V100
+.Trashes
+
+## Windows
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
